@@ -1,6 +1,7 @@
 local _pzs = {}
 local _inPoly = false
 local _menu = false
+local sid = LocalPlayer.state.Character:GetData('SID')
 
 AddEventHandler("Apartment:Shared:DependencyUpdate", RetrieveComponents)
 function RetrieveComponents()
@@ -12,7 +13,6 @@ function RetrieveComponents()
 	Polyzone = exports["mythic-base"]:FetchComponent("Polyzone")
 	Ped = exports["mythic-base"]:FetchComponent("Ped")
 	Sounds = exports["mythic-base"]:FetchComponent("Sounds")
-	Targeting = exports["mythic-base"]:FetchComponent("Targeting")
 	Interaction = exports["mythic-base"]:FetchComponent("Interaction")
 	Action = exports["mythic-base"]:FetchComponent("Action")
 	ListMenu = exports["mythic-base"]:FetchComponent("ListMenu")
@@ -34,7 +34,6 @@ AddEventHandler("Core:Shared:Ready", function()
 		"Polyzone",
 		"Ped",
 		"Sounds",
-		"Targeting",
 		"Interaction",
 		"Action",
 		"ListMenu",
@@ -79,9 +78,9 @@ AddEventHandler("Core:Shared:Ready", function()
 				)]
 
 				local dist = #(
-						vector3(LocalPlayer.state.position.x, LocalPlayer.state.position.y, LocalPlayer.state.position.z)
-						- vector3(p.interior.spawn.x, p.interior.spawn.y, p.interior.spawn.z)
-					)
+					vector3(LocalPlayer.state.position.x, LocalPlayer.state.position.y, LocalPlayer.state.position.z)
+					- vector3(p.interior.spawn.x, p.interior.spawn.y, p.interior.spawn.z)
+				)
 				return dist <= 2.0
 			else
 				return false
@@ -173,7 +172,7 @@ RegisterNetEvent("Apartment:Client:InnerStuff", function(aptId, unit, wakeUp)
 		Wait(10)
 		print("Interior Stuff Waiting, This Shouldn't Spam")
 	end
-	
+
 	local p = GlobalState[string.format("Apartment:%s", aptId)]
 	TriggerEvent("Interiors:Enter", vector3(p.interior.spawn.x, p.interior.spawn.y, p.interior.spawn.z))
 
@@ -183,89 +182,77 @@ RegisterNetEvent("Apartment:Client:InnerStuff", function(aptId, unit, wakeUp)
 		end)
 	end
 
-	Targeting.Zones:AddBox(
-		string.format("apt-%s-exit", aptId),
-		"door-open",
-		p.interior.locations.exit.coords,
-		p.interior.locations.exit.length,
-		p.interior.locations.exit.width,
-		p.interior.locations.exit.options,
-		{
+	-- Exit Zone
+	exports.ox_target:addBoxZone({
+		name = string.format("apt-%s-exit", sid),
+		coords = p.interior.locations.exit.coords,
+		size = vec3(
+			p.interior.locations.exit.length,
+			p.interior.locations.exit.width,
+			p.interior.locations.exit.options.maxZ - p.interior.locations.exit.options.minZ
+		),
+		rotation = p.interior.locations.exit.options.heading,
+		options = {
 			{
-				icon = "door-open",
-				text = "Exit",
-				event = "Apartment:Client:ExitEvent",
-				data = unit,
-			},
-		},
-		3.0,
-		true
-	)
-
-	Targeting.Zones:AddBox(
-		string.format("apt-%s-logout", aptId),
-		"bed",
-		p.interior.locations.logout.coords,
-		p.interior.locations.logout.length,
-		p.interior.locations.logout.width,
-		p.interior.locations.logout.options,
-		{
-			{
-				icon = "bed",
-				text = "Switch Characters",
-				event = "Apartment:Client:Logout",
-				data = unit,
-				isEnabled = function(data)
-					return unit == LocalPlayer.state.Character:GetData("SID")
+				icon = "fas fa-door-open",
+				label = "Exit",
+				onSelect = function(data)
+					TriggerEvent("Apartment:Client:ExitEvent", data, unit)
 				end,
-			},
-		},
-		3.0,
-		true
-	)
+				canInteract = function()
+					return unit == sid
+				end
+			}
+		}
+	})
 
-	Targeting.Zones:AddBox(
-		string.format("apt-%s-wardrobe", propertyId),
-		"shirt",
-		p.interior.locations.wardrobe.coords,
-		p.interior.locations.wardrobe.length,
-		p.interior.locations.wardrobe.width,
-		p.interior.locations.wardrobe.options,
-		{
+	-- Wardrobe Zone
+	exports.ox_target:addBoxZone({
+		name = string.format("apt-%s-wardrobe", sid),
+		coords = p.interior.locations.wardrobe.coords,
+		size = vec3(
+			p.interior.locations.wardrobe.length,
+			p.interior.locations.wardrobe.width,
+			p.interior.locations.wardrobe.options.maxZ - p.interior.locations.wardrobe.options.minZ
+		),
+		rotation = p.interior.locations.wardrobe.options.heading,
+		options = {
 			{
-				icon = "bars-staggered",
-				text = "Wardrobe",
-				event = "Apartment:Client:Wardrobe",
-				data = unit,
-				isEnabled = function(data)
-					return unit == LocalPlayer.state.Character:GetData("SID")
+				icon = "fas fa-shirt",
+				label = "Wardrobe",
+				onSelect = function(data)
+					TriggerEvent("Apartment:Client:Wardrobe", data, unit)
 				end,
-			},
-		},
-		3.0,
-		true
-	)
+				canInteract = function()
+					return unit == sid
+				end
+			}
+		}
+	})
 
-	Targeting.Zones:AddBox(
-		string.format("property-%s-stash", propertyId),
-		"toolbox",
-		p.interior.locations.stash.coords,
-		p.interior.locations.stash.length,
-		p.interior.locations.stash.width,
-		p.interior.locations.stash.options,
-		{
+	-- Stash Zone
+	exports.ox_target:addBoxZone({
+		name = string.format("apt-%s-stash", sid),
+		coords = p.interior.locations.stash.coords,
+		size = vec3(
+			p.interior.locations.stash.length,
+			p.interior.locations.stash.width,
+			p.interior.locations.stash.options.maxZ - p.interior.locations.stash.options.minZ
+		),
+		rotation = p.interior.locations.stash.options.heading,
+		options = {
 			{
-				icon = "toolbox",
-				text = "Stash",
+				icon = "fas fa-toolbox",
+				label = "Stash",
 				event = "Apartment:Client:Stash",
-				data = propertyId,
-			},
-		},
-		2.0,
-		true
-	)
+				data = aptId,
+				canInteract = function()
+					return unit == sid
+				end
+			}
+		}
+	})
 
-	Targeting.Zones:Refresh()
 	Wait(1000)
 	Sync:Stop(1)
 end)
@@ -387,7 +374,6 @@ _APTS = {
 				end
 
 				FreezeEntityPosition(PlayerPedId(), false)
-
 				DoScreenFadeIn(1000)
 				while not IsScreenFadedIn() do
 					Wait(10)
@@ -419,11 +405,8 @@ _APTS = {
 			SetEntityHeading(PlayerPedId(), p.heading)
 
 			for k, v in pairs(p.interior.locations) do
-				Targeting.Zones:RemoveZone(string.format("apt-%s-%s", k, apartmentId))
+				exports.ox_target:removeZone(string.format("apt-%s-%s", sid, k))
 			end
-
-			Targeting.Zones:Refresh()
-
 			DoScreenFadeIn(1000)
 			while not IsScreenFadedIn() do
 				Wait(10)
